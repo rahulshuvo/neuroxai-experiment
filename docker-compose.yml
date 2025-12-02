@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # Database Service
+  db:
+    image: postgres:15-alpine
+    container_name: neuroxai-db
+    restart: always
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Backend Service
+  backend:
+    build: ./backend
+    container_name: neuroxai-backend
+    env_file:
+      - .env
+    environment:
+      - PORT=${PORT}
+      - DB_HOST=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_PORT=${DB_PORT}
+    ports:
+      - '${PORT}:${PORT}'
+    depends_on:
+      - db
+    volumes:
+      - ./backend:/app
+      - node_modules_backend:/app/node_modules
+
+  # Frontend Service
+  frontend:
+    build: ./frontend
+    container_name: neuroxai-frontend
+    env_file:
+      - .env
+    environment:
+      # When running in compose, frontend should call the backend service by name
+      - VITE_API_URL=http://backend:${PORT}
+    ports:
+      - '5173:5173'
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - node_modules_frontend:/app/node_modules
+
+volumes:
+  postgres_data:
+  node_modules_backend:
+  node_modules_frontend:
